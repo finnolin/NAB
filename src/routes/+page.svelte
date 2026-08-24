@@ -2,6 +2,7 @@
 	import { authClient } from '#lib/local/auth-client.js';
 	import { getUserProjects } from './projects.remote.js';
 	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 
 	const session = authClient.useSession();
 </script>
@@ -14,8 +15,11 @@
 				{#each projects as project (project.id)}
 					<a href="/projects/{project.id}">
 						<Card.Root class="transition-shadow hover:shadow-lg">
-							<Card.Header>
+							<Card.Header class="flex items-center justify-between">
 								<Card.Title>{project.label}</Card.Title>
+								{#if !project.isOwner}
+									<Badge variant="secondary">Shared</Badge>
+								{/if}
 							</Card.Header>
 						</Card.Root>
 					</a>

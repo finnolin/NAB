@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { db } from '#lib/server/db/index.js';
 import { names, nameRating, namingProjectCollection } from '#lib/server/db/schema.js';
 import { requireUser } from '#lib/server/auth/require-user.js';
-import { requireOwnedProject } from '#lib/server/db/naming-project.js';
+import { requireProjectAccess } from '#lib/server/db/naming-project.js';
 import { and, asc, eq } from 'drizzle-orm';
 
 const RATINGS = ['dislike', 'like', 'love'] as const;
@@ -11,12 +11,12 @@ type Rating = (typeof RATINGS)[number];
 
 export const getNamingProject = query('unchecked', async (id: string) => {
 	const user = requireUser();
-	return requireOwnedProject(user, id);
+	return requireProjectAccess(user, id);
 });
 
 export const getProjectNames = query('unchecked', async (id: string) => {
 	const user = requireUser();
-	await requireOwnedProject(user, id);
+	await requireProjectAccess(user, id);
 
 	return db
 		.select({
@@ -46,7 +46,7 @@ export const rateName = command(
 		if (!RATINGS.includes(input.rating)) error(400, 'Invalid rating.');
 		if (!input.nameId) error(400, 'Missing name id.');
 
-		await requireOwnedProject(user, input.namingProjectId);
+		await requireProjectAccess(user, input.namingProjectId);
 
 		await db
 			.insert(nameRating)

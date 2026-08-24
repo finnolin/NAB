@@ -119,6 +119,31 @@ export const namingProject = sqliteTable(
 	(table) => [index('naming_project_userId_idx').on(table.userId)]
 );
 
+export const namingProjectUser = sqliteTable(
+	'naming_project_user',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		namingProjectId: text('naming_project_id')
+			.notNull()
+			.references(() => namingProject.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [
+		uniqueIndex('naming_project_user_projectId_userId_uidx').on(
+			table.namingProjectId,
+			table.userId
+		),
+		index('naming_project_user_userId_idx').on(table.userId)
+	]
+);
+
 export const namingProjectCollection = sqliteTable(
 	'naming_project_collection',
 	{

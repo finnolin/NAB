@@ -1,13 +1,42 @@
 import { error } from '@sveltejs/kit';
 import { db } from './index.js';
-import { nameCollection, namingProject, namingProjectCollection } from './schema.js';
-import { and, asc, eq } from 'drizzle-orm';
+import {
+	nameCollection,
+	namingProject,
+	namingProjectCollection,
+	namingProjectUser
+} from './schema.js';
+import { and, asc, eq, or } from 'drizzle-orm';
 
-export async function requireOwnedProject(user: { id: string }, projectId: string) {
+// Strict: only the project's owner passes. Used for owner-level management
+// (collections, membership).
+export async function requireProjectOwner(user: { id: string }, projectId: string) {
 	const [project] = await db
-		.select({ id: namingProject.id, label: namingProject.label })
+		.select({ id: namingProject.id, label: namingProject.label, ownerId: namingProject.userId })
 		.from(namingProject)
 		.where(and(eq(namingProject.id, projectId), eq(namingProject.userId, user.id)));
+	if (!project) error(404, 'Project not found.');
+	return project;
+}
+
+// The owner or anyone added via naming_project_user. Used for viewing/rating.
+export async function requireProjectAccess(user: { id: string }, projectId: string) {
+	const [project] = await db
+		.select({ id: namingProject.id, label: namingProject.label, ownerId: namingProject.userId })
+		.from(namingProject)
+		.leftJoin(
+			namingProjectUser,
+			and(
+				eq(namingProjectUser.namingProjectId, namingProject.id),
+				eq(namingProjectUser.userId, user.id)
+			)
+		)
+		.where(
+			and(
+				eq(namingProject.id, projectId),
+				or(eq(namingProject.userId, user.id), eq(namingProjectUser.userId, user.id))
+			)
+		);
 	if (!project) error(404, 'Project not found.');
 	return project;
 }
