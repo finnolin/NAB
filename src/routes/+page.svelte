@@ -48,7 +48,7 @@
 				data={filteredNames}
 				{columns}
 				filterColumnId="name"
-				filterPlaceholder="Filter by name…"
+				filterPlaceholder="Search..."
 				pageSize={100}
 				emptyMessage="No names found."
 				selectable

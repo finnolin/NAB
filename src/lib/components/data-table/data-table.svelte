@@ -9,10 +9,11 @@
 	} from '@tanstack/svelte-table';
 	import * as Table from '#lib/components/ui/table/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
-	import { Input } from '#lib/components/ui/input/index.js';
 	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
 	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
-	import * as Select from '#lib/components/ui/select/index.js';
+	import * as InputGroup from '#lib/components/ui/input-group/index.js';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import { features, type DataTableFeatures } from './data-table-features.js';
 
 	type BulkActionProps = { selectedIds: string[]; clearSelection: () => void };
@@ -139,22 +140,36 @@
 
 <div class="flex max-h-full min-h-0 w-full flex-col">
 	<div class="flex shrink-0 flex-col gap-2 pb-4">
-		<div class="flex flex-wrap items-center gap-2">
-			<Input placeholder={filterPlaceholder} bind:value={filterText} class="max-w-sm" />
-			<Select.Root type="single" bind:value={matchMode}>
-				<Select.Trigger size="sm" class="w-36">
-					{MATCH_MODE_LABELS[matchMode as MatchMode]}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="contains" label="Contains" />
-					<Select.Item value="startsWith" label="Starts with" />
-					<Select.Item value="endsWith" label="Ends with" />
-				</Select.Content>
-			</Select.Root>
-			{#if toolbarEnd}
-				{@render toolbarEnd()}
-			{/if}
+		<div class="flex flex-row items-center gap-2">
+			<InputGroup.Root class="h-8 max-w-sm">
+				<InputGroup.Input placeholder={filterPlaceholder} bind:value={filterText} />
+				<InputGroup.Addon align="inline-end">
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<InputGroup.Button {...props} size="xs" class="text-xs">
+									{MATCH_MODE_LABELS[matchMode as MatchMode]}
+									<ChevronDownIcon />
+								</InputGroup.Button>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							<DropdownMenu.RadioGroup bind:value={matchMode}>
+								<DropdownMenu.RadioItem value="contains">Contains</DropdownMenu.RadioItem>
+								<DropdownMenu.RadioItem value="startsWith">Starts with</DropdownMenu.RadioItem>
+								<DropdownMenu.RadioItem value="endsWith">Ends with</DropdownMenu.RadioItem>
+							</DropdownMenu.RadioGroup>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				</InputGroup.Addon>
+			</InputGroup.Root>
+
+				{#if toolbarEnd}
+					{@render toolbarEnd()}
+				{/if}
+
 		</div>
+
 		{#if selectable && selectedIds.length > 0}
 			<div class="flex items-center gap-2">
 				<span class="text-sm text-muted-foreground">{selectedIds.length} selected</span>
