@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
-	import { rateName } from './names.remote.js';
-	import { getAllNames } from './all-names.remote.js';
+	import { rateName, getProjectNames } from './project.remote.js';
 	import XIcon from '@lucide/svelte/icons/x';
 	import ThumbsUpIcon from '@lucide/svelte/icons/thumbs-up';
 	import HeartIcon from '@lucide/svelte/icons/heart';
@@ -10,8 +10,8 @@
 	let { id, rating }: { id: string; rating: 'dislike' | 'like' | 'love' | null } = $props();
 
 	async function rate(next: 'dislike' | 'like' | 'love') {
-		await rateName({ firstNameId: id, rating: next });
-		await getAllNames().refresh();
+		await rateName({ namingProjectId: page.params.id!, nameId: id, rating: next });
+		await getProjectNames(page.params.id!).refresh();
 	}
 </script>
 

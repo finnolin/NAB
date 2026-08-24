@@ -1,7 +1,9 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '#lib/assets/favicon.svg';
+	import { page } from '$app/state';
 	import { authClient } from '#lib/local/auth-client.js';
+	import { getNamingProject } from './projects/[id]/project.remote.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -10,6 +12,7 @@
 	let { children } = $props();
 
 	const session = authClient.useSession();
+	const projectId = $derived(page.params.id);
 </script>
 
 <svelte:head>
@@ -20,7 +23,18 @@
 	<header class="shrink-0 border-b">
 		<div class="mx-auto flex max-w-5xl items-center justify-between gap-4 p-4">
 			<nav class="flex items-center gap-4">
-				<a href="/" class="font-semibold">Bebika</a>
+				{#if projectId}
+					<svelte:boundary>
+						{@const project = await getNamingProject(projectId)}
+						<a href="/" class="font-semibold">NAB: {project.label}</a>
+
+						{#snippet pending()}
+							<a href="/" class="font-semibold">NAB</a>
+						{/snippet}
+					</svelte:boundary>
+				{:else}
+					<a href="/" class="font-semibold">NAB</a>
+				{/if}
 			</nav>
 			{#if $session.data}
 				{@const userName = $session.data.user.name}
