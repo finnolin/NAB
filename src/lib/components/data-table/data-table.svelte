@@ -13,6 +13,7 @@
 	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import * as InputGroup from '#lib/components/ui/input-group/index.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import { features, type DataTableFeatures } from './data-table-features.js';
 
@@ -35,6 +36,7 @@
 		toolbarEnd?: Snippet;
 		selectable?: boolean;
 		bulkActions?: Snippet<[BulkActionProps]>;
+		rowDetails?: Snippet<[TData]>;
 	};
 
 	let {
@@ -46,8 +48,17 @@
 		emptyMessage = 'No results.',
 		toolbarEnd,
 		selectable = false,
-		bulkActions
+		bulkActions,
+		rowDetails
 	}: DataTableProps<TData> = $props();
+
+	let detailRow: TData | null = $state(null);
+
+	function openRowDetails(event: MouseEvent, row: TData) {
+		if (!rowDetails) return;
+		if ((event.target as HTMLElement).closest('button, a, input, [role="checkbox"]')) return;
+		detailRow = row;
+	}
 
 	let matchMode = $state('contains');
 	let filterText = $state('');
@@ -164,10 +175,9 @@
 				</InputGroup.Addon>
 			</InputGroup.Root>
 
-				{#if toolbarEnd}
-					{@render toolbarEnd()}
-				{/if}
-
+			{#if toolbarEnd}
+				{@render toolbarEnd()}
+			{/if}
 		</div>
 
 		{#if selectable && selectedIds.length > 0}
@@ -204,7 +214,11 @@
 				{@render colgroup()}
 				<Table.Body>
 					{#each table.getRowModel().rows as row (row.id)}
-						<Table.Row data-state={row.getIsSelected() && 'selected'}>
+						<Table.Row
+							data-state={row.getIsSelected() && 'selected'}
+							class={rowDetails ? 'cursor-pointer' : undefined}
+							onclick={(event) => openRowDetails(event, row.original)}
+						>
 							{#each row.getAllCells() as cell (cell.id)}
 								<Table.Cell>
 									<FlexRender {cell} />
@@ -247,4 +261,19 @@
 			</Button>
 		</div>
 	</div>
+
+	{#if rowDetails}
+		<Dialog.Root
+			open={detailRow !== null}
+			onOpenChange={(open) => {
+				if (!open) detailRow = null;
+			}}
+		>
+			<Dialog.Content>
+				{#if detailRow}
+					{@render rowDetails(detailRow)}
+				{/if}
+			</Dialog.Content>
+		</Dialog.Root>
+	{/if}
 </div>

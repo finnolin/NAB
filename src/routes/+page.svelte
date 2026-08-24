@@ -4,9 +4,12 @@
 	import { getAllNames } from './all-names.remote.js';
 	import { rateName } from './names.remote.js';
 	import DataTable from '#lib/components/data-table/data-table.svelte';
+	import { formatNumber } from '#lib/components/data-table/number-cell.js';
 	import { columns, type NameRow } from './columns.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
 	import ListIcon from '@lucide/svelte/icons/list';
 	import HeartIcon from '@lucide/svelte/icons/heart';
 	import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
@@ -103,6 +106,44 @@
 							<XIcon />
 						</Button>
 					</ButtonGroup>
+				{/snippet}
+				{#snippet rowDetails(row: NameRow)}
+					<Dialog.Header>
+						<Dialog.Title class="text-2xl">{row.name}</Dialog.Title>
+						<Dialog.Description>Rank and birth counts</Dialog.Description>
+					</Dialog.Header>
+					<Card.Root>
+						<Card.Content class="grid grid-cols-2 gap-4">
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									All-time rank
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{row.rankAllTime ? `#${formatNumber(row.rankAllTime)}` : '—'}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									All-time births
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">{formatNumber(row.amountAllTime)}</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									2025 rank
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{row.rankRecent ? `#${formatNumber(row.rankRecent)}` : '—'}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									2025 births
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">{formatNumber(row.amountRecent)}</p>
+							</div>
+						</Card.Content>
+					</Card.Root>
 				{/snippet}
 			</DataTable>
 		{/key}
