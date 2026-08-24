@@ -15,6 +15,7 @@
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import XIcon from '@lucide/svelte/icons/x';
 	import { features, type DataTableFeatures } from './data-table-features.js';
 
 	type BulkActionProps = { selectedIds: string[]; clearSelection: () => void };
@@ -62,6 +63,15 @@
 
 	let matchMode = $state('contains');
 	let filterText = $state('');
+	let debouncedFilterText = $state('');
+
+	$effect(() => {
+		const value = filterText;
+		const timeout = setTimeout(() => {
+			debouncedFilterText = value;
+		}, 200);
+		return () => clearTimeout(timeout);
+	});
 
 	function textMatchFilterFn(
 		row: { getValue: (columnId: string) => unknown },
@@ -122,9 +132,17 @@
 	});
 
 	$effect(() => {
+		// Also re-run (and reset to page one) when the caller swaps in a
+		// different filtered `data` set, e.g. switching the rating filter —
+		// autoResetPageIndex is off, so an out-of-range page would otherwise stick.
+		void data;
 		table
 			.getColumn(filterColumnId)
-			?.setFilterValue(filterText ? { mode: matchMode as MatchMode, text: filterText } : undefined);
+			?.setFilterValue(
+				debouncedFilterText
+					? { mode: matchMode as MatchMode, text: debouncedFilterText }
+					: undefined
+			);
 		table.setPageIndex(0);
 	});
 
@@ -155,6 +173,15 @@
 			<InputGroup.Root class="h-8 max-w-sm">
 				<InputGroup.Input placeholder={filterPlaceholder} bind:value={filterText} />
 				<InputGroup.Addon align="inline-end">
+					{#if filterText}
+						<InputGroup.Button
+							size="icon-xs"
+							aria-label="Clear filter"
+							onclick={() => (filterText = '')}
+						>
+							<XIcon />
+						</InputGroup.Button>
+					{/if}
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger>
 							{#snippet child({ props })}

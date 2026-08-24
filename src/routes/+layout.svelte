@@ -20,7 +20,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="flex h-screen flex-col">
+<div class="flex h-dvh flex-col">
 	<header class="shrink-0 border-b">
 		<div class="mx-auto flex max-w-5xl items-center justify-between gap-4 p-4">
 			<nav class="flex items-center gap-4">

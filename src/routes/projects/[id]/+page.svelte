@@ -52,111 +52,109 @@
 <div class="mx-auto flex h-full min-h-0 max-w-5xl flex-col gap-4 p-4">
 	<svelte:boundary>
 		{#key projectId}
-			{#key ratingFilter}
-				<DataTable
-					data={filteredNames}
-					{columns}
-					filterColumnId="name"
-					filterPlaceholder="Search..."
-					pageSize={100}
-					emptyMessage="No names found."
-					selectable
-				>
-					{#snippet bulkActions({ selectedIds, clearSelection })}
+			<DataTable
+				data={filteredNames}
+				{columns}
+				filterColumnId="name"
+				filterPlaceholder="Search..."
+				pageSize={100}
+				emptyMessage="No names found."
+				selectable
+			>
+				{#snippet bulkActions({ selectedIds, clearSelection })}
+					<Button
+						variant="destructive"
+						size="sm"
+						onclick={() => bulkDislike(selectedIds, clearSelection)}
+					>
+						<XIcon />
+						Dislike selected
+					</Button>
+				{/snippet}
+				{#snippet toolbarEnd()}
+					<ButtonGroup>
 						<Button
-							variant="destructive"
-							size="sm"
-							onclick={() => bulkDislike(selectedIds, clearSelection)}
+							variant={ratingFilter === 'unrated' ? 'default' : 'outline'}
+							size="icon-sm"
+							aria-label="Show names not rated by me"
+							aria-pressed={ratingFilter === 'unrated'}
+							onclick={() => setRatingFilter('unrated')}
+						>
+							<CircleDashedIcon />
+						</Button>
+						<Button
+							variant={ratingFilter === 'liked-loved' ? 'default' : 'outline'}
+							size="icon-sm"
+							aria-label="Show liked and loved names"
+							aria-pressed={ratingFilter === 'liked-loved'}
+							onclick={() => setRatingFilter('liked-loved')}
+						>
+							<HeartIcon />
+						</Button>
+
+						<Button
+							variant={ratingFilter === 'all' ? 'default' : 'outline'}
+							size="icon-sm"
+							aria-label="Show all names"
+							aria-pressed={ratingFilter === 'all'}
+							onclick={() => setRatingFilter('all')}
+						>
+							<ListIcon />
+						</Button>
+						<Button
+							variant={ratingFilter === 'disliked' ? 'default' : 'outline'}
+							size="icon-sm"
+							aria-label="Show disliked names"
+							aria-pressed={ratingFilter === 'disliked'}
+							onclick={() => setRatingFilter('disliked')}
 						>
 							<XIcon />
-							Dislike selected
 						</Button>
-					{/snippet}
-					{#snippet toolbarEnd()}
-						<ButtonGroup>
-							<Button
-								variant={ratingFilter === 'unrated' ? 'default' : 'outline'}
-								size="icon-sm"
-								aria-label="Show names not rated by me"
-								aria-pressed={ratingFilter === 'unrated'}
-								onclick={() => setRatingFilter('unrated')}
-							>
-								<CircleDashedIcon />
-							</Button>
-							<Button
-								variant={ratingFilter === 'liked-loved' ? 'default' : 'outline'}
-								size="icon-sm"
-								aria-label="Show liked and loved names"
-								aria-pressed={ratingFilter === 'liked-loved'}
-								onclick={() => setRatingFilter('liked-loved')}
-							>
-								<HeartIcon />
-							</Button>
-
-							<Button
-								variant={ratingFilter === 'all' ? 'default' : 'outline'}
-								size="icon-sm"
-								aria-label="Show all names"
-								aria-pressed={ratingFilter === 'all'}
-								onclick={() => setRatingFilter('all')}
-							>
-								<ListIcon />
-							</Button>
-							<Button
-								variant={ratingFilter === 'disliked' ? 'default' : 'outline'}
-								size="icon-sm"
-								aria-label="Show disliked names"
-								aria-pressed={ratingFilter === 'disliked'}
-								onclick={() => setRatingFilter('disliked')}
-							>
-								<XIcon />
-							</Button>
-						</ButtonGroup>
-					{/snippet}
-					{#snippet rowDetails(row: NameRow)}
-						<Dialog.Header>
-							<Dialog.Title class="text-2xl">{row.name}</Dialog.Title>
-							<Dialog.Description>Rank and birth counts</Dialog.Description>
-						</Dialog.Header>
-						<Card.Root>
-							<Card.Content class="grid grid-cols-2 gap-4">
-								<div>
-									<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-										All-time rank
-									</p>
-									<p class="text-2xl font-semibold tabular-nums">
-										{row.rankAllTime ? `#${formatNumber(row.rankAllTime)}` : '—'}
-									</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-										All-time births
-									</p>
-									<p class="text-2xl font-semibold tabular-nums">
-										{formatNumber(row.amountAllTime)}
-									</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-										2025 rank
-									</p>
-									<p class="text-2xl font-semibold tabular-nums">
-										{row.rankRecent ? `#${formatNumber(row.rankRecent)}` : '—'}
-									</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-										2025 births
-									</p>
-									<p class="text-2xl font-semibold tabular-nums">
-										{formatNumber(row.amountRecent)}
-									</p>
-								</div>
-							</Card.Content>
-						</Card.Root>
-					{/snippet}
-				</DataTable>
-			{/key}
+					</ButtonGroup>
+				{/snippet}
+				{#snippet rowDetails(row: NameRow)}
+					<Dialog.Header>
+						<Dialog.Title class="text-2xl">{row.name}</Dialog.Title>
+						<Dialog.Description>Rank and birth counts</Dialog.Description>
+					</Dialog.Header>
+					<Card.Root>
+						<Card.Content class="grid grid-cols-2 gap-4">
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									All-time rank
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{row.rankAllTime ? `#${formatNumber(row.rankAllTime)}` : '—'}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									All-time births
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{formatNumber(row.amountAllTime)}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									2025 rank
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{row.rankRecent ? `#${formatNumber(row.rankRecent)}` : '—'}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									2025 births
+								</p>
+								<p class="text-2xl font-semibold tabular-nums">
+									{formatNumber(row.amountRecent)}
+								</p>
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/snippet}
+			</DataTable>
 		{/key}
 
 		{#snippet pending()}
