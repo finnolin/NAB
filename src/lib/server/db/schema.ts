@@ -71,16 +71,75 @@ export const account = sqliteTable(
 	]
 );
 
-export const firstName = sqliteTable('first_name', {
+export const nameCollection = sqliteTable('name_collection', {
 	id: text('id')
 		.primaryKey()
 		.$defaultFn(() => crypto.randomUUID()),
-	name: text('name').notNull().unique(),
-	rankAllTime: integer('rank_all_time'),
-	rankRecent: integer('rank_recent'),
-	amountAllTime: integer('amount_all_time').notNull().default(0),
-	amountRecent: integer('amount_recent').notNull().default(0)
+	label: text('label').notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull()
 });
+
+export const names = sqliteTable(
+	'name',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		collectionId: text('collection_id')
+			.notNull()
+			.references(() => nameCollection.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		rankAllTime: integer('rank_all_time'),
+		rankRecent: integer('rank_recent'),
+		amountAllTime: integer('amount_all_time').notNull().default(0),
+		amountRecent: integer('amount_recent').notNull().default(0)
+	},
+	(table) => [
+		uniqueIndex('name_collectionId_name_uidx').on(table.collectionId, table.name),
+		index('name_collectionId_idx').on(table.collectionId)
+	]
+);
+
+export const namingProject = sqliteTable(
+	'naming_project',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		label: text('label').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [index('naming_project_userId_idx').on(table.userId)]
+);
+
+export const namingProjectCollection = sqliteTable(
+	'naming_project_collection',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		namingProjectId: text('naming_project_id')
+			.notNull()
+			.references(() => namingProject.id, { onDelete: 'cascade' }),
+		collectionId: text('collection_id')
+			.notNull()
+			.references(() => nameCollection.id, { onDelete: 'cascade' })
+	},
+	(table) => [
+		uniqueIndex('naming_project_collection_projectId_collectionId_uidx').on(
+			table.namingProjectId,
+			table.collectionId
+		),
+		index('naming_project_collection_collectionId_idx').on(table.collectionId)
+	]
+);
 
 export const nameRating = sqliteTable(
 	'name_rating',
@@ -91,9 +150,12 @@ export const nameRating = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		firstNameId: text('first_name_id')
+		namingProjectId: text('naming_project_id')
 			.notNull()
-			.references(() => firstName.id, { onDelete: 'cascade' }),
+			.references(() => namingProject.id, { onDelete: 'cascade' }),
+		nameId: text('name_id')
+			.notNull()
+			.references(() => names.id, { onDelete: 'cascade' }),
 		rating: text('rating', { enum: ['dislike', 'like', 'love'] }).notNull(),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -104,8 +166,8 @@ export const nameRating = sqliteTable(
 			.notNull()
 	},
 	(table) => [
-		uniqueIndex('name_rating_userId_firstNameId_uidx').on(table.userId, table.firstNameId),
-		index('name_rating_firstNameId_idx').on(table.firstNameId),
+		uniqueIndex('name_rating_namingProjectId_nameId_uidx').on(table.namingProjectId, table.nameId),
+		index('name_rating_nameId_idx').on(table.nameId),
 		check('name_rating_rating_check', sql`${table.rating} in ('dislike', 'like', 'love')`)
 	]
 );

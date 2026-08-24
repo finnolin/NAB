@@ -1,6 +1,6 @@
 // One-off import of Statistik Austria's Vornamen ODS export (boy names, sheet
-// "Tabelle_12") into the `first_name` table. Safe to re-run: rows are
-// upserted by name.
+// "Tabelle_12") into the `name` table, under the "Austrian Boy Names"
+// collection. Safe to re-run: rows are upserted by (collection, name).
 //
 // Usage: node scripts/import-boy-names.mjs
 
@@ -85,13 +85,31 @@ for (const row of rows) {
 const entries = [...byName.values()];
 console.log(`Parsed ${rows.length} rows -> ${entries.length} unique names.`);
 
+const COLLECTION_LABEL = 'Austrian Boy Names';
+
 const databaseUrl = loadDatabaseUrl();
 const db = new DatabaseSync(path.resolve(databaseUrl));
 
+function getOrCreateCollectionId() {
+	const existing = db
+		.prepare('select id from name_collection where label = :label')
+		.get({ label: COLLECTION_LABEL });
+	if (existing) return existing.id;
+
+	const id = crypto.randomUUID();
+	db.prepare('insert into name_collection (id, label) values (:id, :label)').run({
+		id,
+		label: COLLECTION_LABEL
+	});
+	return id;
+}
+
+const collectionId = getOrCreateCollectionId();
+
 const upsert = db.prepare(`
-	insert into first_name (id, name, rank_all_time, rank_recent, amount_all_time, amount_recent)
-	values (lower(hex(randomblob(16))), :name, :rankAllTime, :rankRecent, :amountAllTime, :amountRecent)
-	on conflict(name) do update set
+	insert into name (id, collection_id, name, rank_all_time, rank_recent, amount_all_time, amount_recent)
+	values (lower(hex(randomblob(16))), :collectionId, :name, :rankAllTime, :rankRecent, :amountAllTime, :amountRecent)
+	on conflict(collection_id, name) do update set
 		rank_all_time = excluded.rank_all_time,
 		rank_recent = excluded.rank_recent,
 		amount_all_time = excluded.amount_all_time,
@@ -102,6 +120,7 @@ db.exec('begin transaction');
 try {
 	for (const entry of entries) {
 		upsert.run({
+			collectionId,
 			name: entry.name,
 			rankAllTime: entry.rankAllTime,
 			rankRecent: entry.rankRecent,
@@ -115,5 +134,5 @@ try {
 	throw err;
 }
 
-console.log(`Upserted ${entries.length} boy names into first_name.`);
+console.log(`Upserted ${entries.length} boy names into the "${COLLECTION_LABEL}" collection.`);
 db.close();
