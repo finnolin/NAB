@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
-	import { rateName } from '../names.remote.js';
+	import { rateName } from './names.remote.js';
 	import { getAllNames } from './all-names.remote.js';
 	import XIcon from '@lucide/svelte/icons/x';
 	import ThumbsUpIcon from '@lucide/svelte/icons/thumbs-up';
