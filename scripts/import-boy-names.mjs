@@ -9,7 +9,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
-const SOURCE_FILE = 'Vornamen_1984_bis_2025_original_Schreibweise.ods';
+const SOURCE_FILE = 'import/Vornamen_1984_bis_2025_original_Schreibweise.ods';
 const SHEET_NAME = 'Tabelle_12';
 const HEADER_ROWS = 3; // data starts at spreadsheet row 4 (0-indexed row 3)
 
