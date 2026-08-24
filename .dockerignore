@@ -1,0 +1,19 @@
+node_modules
+.svelte-kit
+build
+.git
+
+# Env
+.env
+.env.*
+!.env.example
+
+# SQLite
+*.db
+
+# Raw import source data
+import
+
+# Misc
+.claude
+.vscode

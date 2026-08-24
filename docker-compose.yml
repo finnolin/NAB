@@ -1,0 +1,16 @@
+services:
+  app:
+    image: ghcr.io/finnolin/nab:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: /data/local.db
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env (openssl rand -base64 32)}
+      BETTER_AUTH_URL: ${ORIGIN:?Set ORIGIN in .env, e.g. https://names.example.com}
+      ORIGIN: ${ORIGIN:?Set ORIGIN in .env, e.g. https://names.example.com}
+    volumes:
+      - db-data:/data
+
+volumes:
+  db-data:
