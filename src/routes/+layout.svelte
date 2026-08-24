@@ -3,6 +3,9 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import { authClient } from '#lib/local/auth-client.js';
 	import { Button } from '#lib/components/ui/button/index.js';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import LogOutIcon from '@lucide/svelte/icons/log-out';
 
 	let { children } = $props();
 
@@ -20,10 +23,23 @@
 				<a href="/" class="font-semibold">Bebika</a>
 			</nav>
 			{#if $session.data}
-				<div class="flex items-center gap-2">
-					<span class="text-sm text-muted-foreground">{$session.data.user.name}</span>
-					<Button variant="outline" onclick={() => authClient.signOut()}>Sign Out</Button>
-				</div>
+				{@const userName = $session.data.user.name}
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Button variant="outline" {...props}>
+								{userName}
+								<ChevronDownIcon />
+							</Button>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						<DropdownMenu.Item onclick={() => authClient.signOut()}>
+							<LogOutIcon />
+							Sign Out
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
 			{:else}
 				<Button href="/login">Login</Button>
 			{/if}
