@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prettier *)",
+      "WebFetch(domain:next.svelte.dev)",
+      "WebFetch(domain:svelte.dev)",
+      "WebFetch(domain:www.shadcn-svelte.com)",
+      "Bash(npx shadcn-svelte *)",
+      "Bash(grep -iE \"^arrow-\\(up|down\\)\\(-down|-up\\)?\\\\.svelte$|^chevrons-up-down\")",
+      "Bash(grep -E \"^x\\\\.svelte$|^thumbs-up\\\\.svelte$|^heart\\\\.svelte$\")"
+    ]
+  }
+}
