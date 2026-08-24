@@ -1,26 +1,13 @@
 import { query, command } from '$app/server';
 import { error } from '@sveltejs/kit';
 import { db } from '#lib/server/db/index.js';
-import {
-	names,
-	nameRating,
-	namingProject,
-	namingProjectCollection
-} from '#lib/server/db/schema.js';
+import { names, nameRating, namingProjectCollection } from '#lib/server/db/schema.js';
 import { requireUser } from '#lib/server/auth/require-user.js';
+import { requireOwnedProject } from '#lib/server/db/naming-project.js';
 import { and, asc, eq } from 'drizzle-orm';
 
 const RATINGS = ['dislike', 'like', 'love'] as const;
 type Rating = (typeof RATINGS)[number];
-
-async function requireOwnedProject(user: { id: string }, projectId: string) {
-	const [project] = await db
-		.select({ id: namingProject.id, label: namingProject.label })
-		.from(namingProject)
-		.where(and(eq(namingProject.id, projectId), eq(namingProject.userId, user.id)));
-	if (!project) error(404, 'Project not found.');
-	return project;
-}
 
 export const getNamingProject = query('unchecked', async (id: string) => {
 	const user = requireUser();

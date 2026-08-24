@@ -1,6 +1,16 @@
+import { error } from '@sveltejs/kit';
 import { db } from './index.js';
 import { nameCollection, namingProject, namingProjectCollection } from './schema.js';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+
+export async function requireOwnedProject(user: { id: string }, projectId: string) {
+	const [project] = await db
+		.select({ id: namingProject.id, label: namingProject.label })
+		.from(namingProject)
+		.where(and(eq(namingProject.id, projectId), eq(namingProject.userId, user.id)));
+	if (!project) error(404, 'Project not found.');
+	return project;
+}
 
 // Every user gets one auto-provisioned default naming project until real
 // project creation/selection UI exists. Linked to every collection that

@@ -8,6 +8,7 @@
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
+	import SettingsIcon from '@lucide/svelte/icons/settings-2';
 
 	let { children } = $props();
 
@@ -27,6 +28,10 @@
 					<svelte:boundary>
 						{@const project = await getNamingProject(projectId)}
 						<a href="/" class="font-semibold">NAB: {project.label}</a>
+						<Button href="/projects/{projectId}/settings" variant="ghost" size="icon-sm">
+							<SettingsIcon />
+							<span class="sr-only">Project settings</span>
+						</Button>
 
 						{#snippet pending()}
 							<a href="/" class="font-semibold">NAB</a>
