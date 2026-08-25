@@ -1,9 +1,10 @@
 <script lang="ts">
 	import NameStatsCard from './name-stats-card.svelte';
 	import RaterBadges from './rater-badges.svelte';
-	import { getNameRatings, rateName } from './project.remote.js';
+	import { getNameRatings, getProjectAffixes, rateName } from './project.remote.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import XIcon from '@lucide/svelte/icons/x';
 	import ThumbsUpIcon from '@lucide/svelte/icons/thumbs-up';
 	import HeartIcon from '@lucide/svelte/icons/heart';
@@ -36,6 +37,27 @@
 </script>
 
 <NameStatsCard {name} {rankAllTime} {amountAllTime} {rankRecent} {amountRecent} />
+
+<svelte:boundary>
+	{@const affixes = await getProjectAffixes(projectId)}
+	{@const prefixes = affixes.filter((a) => a.type === 'prefix')}
+	{@const suffixes = affixes.filter((a) => a.type === 'suffix')}
+	{#if prefixes.length > 0 || suffixes.length > 0}
+		<div class="flex flex-col gap-2">
+			<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Preview</p>
+			<div class="flex flex-wrap gap-1">
+				{#each prefixes as p (p.id)}
+					<Badge variant="outline">{p.value}{name}</Badge>
+				{/each}
+				{#each suffixes as s (s.id)}
+					<Badge variant="outline">{name}{s.value}</Badge>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	{#snippet pending()}{/snippet}
+</svelte:boundary>
 
 <svelte:boundary>
 	{@const { ratings, myRating } = await getNameRatings({ projectId, nameId })}

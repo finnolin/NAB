@@ -144,6 +144,27 @@ export const namingProjectUser = sqliteTable(
 	]
 );
 
+export const namingProjectAffix = sqliteTable(
+	'naming_project_affix',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		namingProjectId: text('naming_project_id')
+			.notNull()
+			.references(() => namingProject.id, { onDelete: 'cascade' }),
+		type: text('type', { enum: ['prefix', 'suffix'] }).notNull(),
+		value: text('value').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [
+		index('naming_project_affix_projectId_idx').on(table.namingProjectId),
+		check('naming_project_affix_type_check', sql`${table.type} in ('prefix', 'suffix')`)
+	]
+);
+
 export const namingProjectCollection = sqliteTable(
 	'naming_project_collection',
 	{

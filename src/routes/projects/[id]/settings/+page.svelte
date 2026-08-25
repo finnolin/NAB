@@ -10,6 +10,7 @@
 		removeProjectMember,
 		deleteProject
 	} from './settings.remote.js';
+	import { getProjectAffixes, addAffix, removeAffix } from '../project.remote.js';
 	import { getUserProjects } from '../../../projects.remote.js';
 	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
@@ -29,6 +30,24 @@
 			await removeCollection({ projectId, collectionId });
 		}
 		await getProjectCollections(projectId).refresh();
+	}
+
+	let newPrefix = $state('');
+	let newSuffix = $state('');
+
+	async function handleAddAffix(event: SubmitEvent, type: 'prefix' | 'suffix') {
+		event.preventDefault();
+		const value = type === 'prefix' ? newPrefix : newSuffix;
+		if (!value.trim()) return;
+		await addAffix({ projectId, type, value });
+		if (type === 'prefix') newPrefix = '';
+		else newSuffix = '';
+		await getProjectAffixes(projectId).refresh();
+	}
+
+	async function handleRemoveAffix(affixId: string) {
+		await removeAffix({ projectId, affixId });
+		await getProjectAffixes(projectId).refresh();
 	}
 
 	let email = $state('');
@@ -98,6 +117,77 @@
 					{/each}
 				</Card.Content>
 			</Card.Root>
+
+			{#snippet pending()}
+				<p class="text-muted-foreground">Loading…</p>
+			{/snippet}
+		</svelte:boundary>
+	</div>
+
+	<div class="flex flex-col gap-2">
+		<h2 class="text-sm font-medium">Prefixes &amp; suffixes</h2>
+		<p class="text-sm text-muted-foreground">
+			Preview names combined with a prefix or suffix (e.g. a last name, or a company suffix like
+			".com") in the name dialog. Anyone in this project can edit these.
+		</p>
+		<svelte:boundary>
+			{@const affixes = await getProjectAffixes(projectId)}
+			{@const prefixes = affixes.filter((a) => a.type === 'prefix')}
+			{@const suffixes = affixes.filter((a) => a.type === 'suffix')}
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<Card.Root>
+					<Card.Header>
+						<Card.Title class="text-sm">Prefixes</Card.Title>
+					</Card.Header>
+					<Card.Content class="flex flex-col gap-2">
+						{#each prefixes as affix (affix.id)}
+							<div class="flex items-center justify-between gap-2">
+								<span class="text-sm">{affix.value}</span>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Remove prefix"
+									onclick={() => handleRemoveAffix(affix.id)}
+								>
+									<XIcon />
+								</Button>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">No prefixes yet.</p>
+						{/each}
+						<form class="flex items-center gap-2" onsubmit={(e) => handleAddAffix(e, 'prefix')}>
+							<Input placeholder="Mr. " bind:value={newPrefix} class="h-8" />
+							<Button type="submit" size="sm">Add</Button>
+						</form>
+					</Card.Content>
+				</Card.Root>
+				<Card.Root>
+					<Card.Header>
+						<Card.Title class="text-sm">Suffixes</Card.Title>
+					</Card.Header>
+					<Card.Content class="flex flex-col gap-2">
+						{#each suffixes as affix (affix.id)}
+							<div class="flex items-center justify-between gap-2">
+								<span class="text-sm">{affix.value}</span>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Remove suffix"
+									onclick={() => handleRemoveAffix(affix.id)}
+								>
+									<XIcon />
+								</Button>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">No suffixes yet.</p>
+						{/each}
+						<form class="flex items-center gap-2" onsubmit={(e) => handleAddAffix(e, 'suffix')}>
+							<Input placeholder=" Smith" bind:value={newSuffix} class="h-8" />
+							<Button type="submit" size="sm">Add</Button>
+						</form>
+					</Card.Content>
+				</Card.Root>
+			</div>
 
 			{#snippet pending()}
 				<p class="text-muted-foreground">Loading…</p>

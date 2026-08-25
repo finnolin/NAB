@@ -4,6 +4,7 @@ import { db } from '#lib/server/db/index.js';
 import {
 	names,
 	nameRating,
+	namingProjectAffix,
 	namingProjectCollection,
 	user as userTable
 } from '#lib/server/db/schema.js';
@@ -13,6 +14,9 @@ import { and, asc, eq } from 'drizzle-orm';
 
 const RATINGS = ['dislike', 'like', 'love'] as const;
 type Rating = (typeof RATINGS)[number];
+
+const AFFIX_TYPES = ['prefix', 'suffix'] as const;
+type AffixType = (typeof AFFIX_TYPES)[number];
 
 export const getNamingProject = query('unchecked', async (id: string) => {
 	const user = requireUser();
@@ -76,6 +80,55 @@ export const getNameRatings = query(
 				})),
 			myRating: (mine?.rating as Rating | undefined) ?? null
 		};
+	}
+);
+
+export const getProjectAffixes = query('unchecked', async (id: string) => {
+	const user = requireUser();
+	await requireProjectAccess(user, id);
+
+	return db
+		.select({
+			id: namingProjectAffix.id,
+			type: namingProjectAffix.type,
+			value: namingProjectAffix.value
+		})
+		.from(namingProjectAffix)
+		.where(eq(namingProjectAffix.namingProjectId, id))
+		.orderBy(asc(namingProjectAffix.createdAt));
+});
+
+export const addAffix = command(
+	'unchecked',
+	async (input: { projectId: string; type: AffixType; value: string }) => {
+		const user = requireUser();
+
+		if (!AFFIX_TYPES.includes(input.type)) error(400, 'Invalid affix type.');
+		const value = input.value.trim();
+		if (!value) error(400, 'Affix cannot be empty.');
+
+		await requireProjectAccess(user, input.projectId);
+
+		await db
+			.insert(namingProjectAffix)
+			.values({ namingProjectId: input.projectId, type: input.type, value });
+	}
+);
+
+export const removeAffix = command(
+	'unchecked',
+	async (input: { projectId: string; affixId: string }) => {
+		const user = requireUser();
+		await requireProjectAccess(user, input.projectId);
+
+		await db
+			.delete(namingProjectAffix)
+			.where(
+				and(
+					eq(namingProjectAffix.namingProjectId, input.projectId),
+					eq(namingProjectAffix.id, input.affixId)
+				)
+			);
 	}
 );
 
