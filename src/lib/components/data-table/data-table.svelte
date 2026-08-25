@@ -1,5 +1,5 @@
 <script lang="ts" generics="TData extends RowData & { id: string }">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import {
 		type ColumnDef,
 		type RowData,
@@ -131,22 +131,50 @@
 		}
 	});
 
+	// `table.*` calls read the table's internal (interconnected) reactive
+	// state, so calling them inside an $effect can silently drag in far
+	// broader dependencies than intended (e.g. picking up `data` changes even
+	// though only debouncedFilterText/matchMode were meant to be tracked).
+	// Read the values we actually want to react to as plain locals first,
+	// then do the table mutation inside untrack() so those internal reads
+	// can't leak into this effect's dependency set.
 	$effect(() => {
-		// Also re-run (and reset to page one) when the caller swaps in a
-		// different filtered `data` set, e.g. switching the rating filter —
-		// autoResetPageIndex is off, so an out-of-range page would otherwise stick.
+		// Starting a new search should jump back to page one.
+		const text = debouncedFilterText;
+		const mode = matchMode as MatchMode;
+		untrack(() => {
+			table.getColumn(filterColumnId)?.setFilterValue(text ? { mode, text } : undefined);
+			table.setPageIndex(0);
+		});
+	});
+
+	$effect(() => {
+		// Only reset to page one when the current page is no longer valid for
+		// the (possibly filtered) row count — e.g. the caller swaps in a much
+		// smaller `data` set by switching the rating filter. autoResetPageIndex
+		// is off, so an out-of-range page would otherwise stick. Deliberately
+		// does NOT reset on every data change (like a single rating update
+		// refetching the same-sized list), which would keep bouncing the user
+		// back to page one while rating.
 		void data;
-		table
-			.getColumn(filterColumnId)
-			?.setFilterValue(
-				debouncedFilterText
-					? { mode: matchMode as MatchMode, text: debouncedFilterText }
-					: undefined
-			);
-		table.setPageIndex(0);
+		untrack(() => {
+			const { pageIndex } = table.atoms.pagination.get();
+			if (pageIndex > 0 && pageIndex >= table.getPageCount()) {
+				table.setPageIndex(0);
+			}
+		});
 	});
 
 	const pagination = $derived(table.atoms.pagination.get());
+
+	let scrollViewport: HTMLElement | null = $state(null);
+
+	$effect(() => {
+		// Track only the page index; scrollTo is a plain DOM call, no need for untrack.
+		void pagination.pageIndex;
+		scrollViewport?.scrollTo({ top: 0 });
+	});
+
 	const rowSelection = $derived(table.atoms.rowSelection.get());
 	const selectedIds = $derived(
 		Object.entries(rowSelection ?? {})
@@ -236,7 +264,7 @@
 			</Table.Header>
 		</Table.Root>
 
-		<ScrollArea class="min-h-0">
+		<ScrollArea class="min-h-0" bind:viewportRef={scrollViewport}>
 			<Table.Root containerClass="" class="table-fixed">
 				{@render colgroup()}
 				<Table.Body>

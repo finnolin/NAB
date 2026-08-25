@@ -104,14 +104,15 @@ export const addAffix = command(
 		const user = requireUser();
 
 		if (!AFFIX_TYPES.includes(input.type)) error(400, 'Invalid affix type.');
-		const value = input.value.trim();
-		if (!value) error(400, 'Affix cannot be empty.');
+		// Leading/trailing spaces are meaningful here (e.g. a suffix like " Smith"),
+		// so only check for blank input — don't trim what actually gets stored.
+		if (!input.value.trim()) error(400, 'Affix cannot be empty.');
 
 		await requireProjectAccess(user, input.projectId);
 
 		await db
 			.insert(namingProjectAffix)
-			.values({ namingProjectId: input.projectId, type: input.type, value });
+			.values({ namingProjectId: input.projectId, type: input.type, value: input.value });
 	}
 );
 
