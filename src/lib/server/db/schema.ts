@@ -191,7 +191,11 @@ export const nameRating = sqliteTable(
 			.notNull()
 	},
 	(table) => [
-		uniqueIndex('name_rating_namingProjectId_nameId_uidx').on(table.namingProjectId, table.nameId),
+		uniqueIndex('name_rating_namingProjectId_nameId_userId_uidx').on(
+			table.namingProjectId,
+			table.nameId,
+			table.userId
+		),
 		index('name_rating_nameId_idx').on(table.nameId),
 		check('name_rating_rating_check', sql`${table.rating} in ('dislike', 'like', 'love')`)
 	]

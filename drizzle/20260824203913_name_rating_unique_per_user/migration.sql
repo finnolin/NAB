@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS `name_rating_namingProjectId_nameId_uidx`;--> statement-breakpoint
+CREATE UNIQUE INDEX `name_rating_namingProjectId_nameId_userId_uidx` ON `name_rating` (`naming_project_id`,`name_id`,`user_id`);

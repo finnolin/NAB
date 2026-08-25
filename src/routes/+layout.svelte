@@ -9,6 +9,8 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import SettingsIcon from '@lucide/svelte/icons/settings-2';
+	import UsersIcon from '@lucide/svelte/icons/users';
+	import ListIcon from '@lucide/svelte/icons/list';
 
 	let { children } = $props();
 
@@ -28,10 +30,6 @@
 					<svelte:boundary>
 						{@const project = await getNamingProject(projectId)}
 						<a href="/" class="font-semibold">NAB: {project.label}</a>
-						<Button href="/projects/{projectId}/settings" variant="ghost" size="icon-sm">
-							<SettingsIcon />
-							<span class="sr-only">Project settings</span>
-						</Button>
 
 						{#snippet pending()}
 							<a href="/" class="font-semibold">NAB</a>
@@ -41,27 +39,43 @@
 					<a href="/" class="font-semibold">NAB</a>
 				{/if}
 			</nav>
-			{#if $session.data}
-				{@const userName = $session.data.user.name}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<Button variant="outline" {...props}>
-								{userName}
-								<ChevronDownIcon />
-							</Button>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end">
-						<DropdownMenu.Item onclick={() => authClient.signOut()}>
-							<LogOutIcon />
-							Sign Out
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			{:else}
-				<Button href="/login">Login</Button>
-			{/if}
+			<div class="flex items-center gap-2">
+				{#if projectId}
+					<Button href="/projects/{projectId}" variant="ghost" size="icon-sm">
+						<ListIcon />
+						<span class="sr-only">All names</span>
+					</Button>
+					<Button href="/projects/{projectId}/liked" variant="ghost" size="icon-sm">
+						<UsersIcon />
+						<span class="sr-only">Liked &amp; loved names</span>
+					</Button>
+					<Button href="/projects/{projectId}/settings" variant="ghost" size="icon-sm">
+						<SettingsIcon />
+						<span class="sr-only">Project settings</span>
+					</Button>
+				{/if}
+				{#if $session.data}
+					{@const userName = $session.data.user.name}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<Button variant="outline" {...props}>
+									{userName}
+									<ChevronDownIcon />
+								</Button>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							<DropdownMenu.Item onclick={() => authClient.signOut()}>
+								<LogOutIcon />
+								Sign Out
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				{:else}
+					<Button href="/login">Login</Button>
+				{/if}
+			</div>
 		</div>
 	</header>
 

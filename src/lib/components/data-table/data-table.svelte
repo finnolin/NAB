@@ -169,8 +169,8 @@
 
 <div class="flex max-h-full min-h-0 w-full flex-col">
 	<div class="flex shrink-0 flex-col gap-2 pb-4">
-		<div class="flex flex-row items-center gap-2">
-			<InputGroup.Root class="h-8 max-w-sm">
+		<div class="flex flex-row items-center justify-between gap-2">
+			<InputGroup.Root class="h-8 max-w-sm flex-1">
 				<InputGroup.Input placeholder={filterPlaceholder} bind:value={filterText} />
 				<InputGroup.Addon align="inline-end">
 					{#if filterText}

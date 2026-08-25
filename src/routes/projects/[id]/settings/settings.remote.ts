@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { db } from '#lib/server/db/index.js';
 import {
 	nameCollection,
+	namingProject,
 	namingProjectCollection,
 	namingProjectUser,
 	user
@@ -117,3 +118,11 @@ export const removeProjectMember = command(
 			);
 	}
 );
+
+export const deleteProject = command('unchecked', async (projectId: string) => {
+	const requester = requireUser();
+	await requireProjectOwner(requester, projectId);
+
+	// Cascades to naming_project_collection, naming_project_user, and name_rating.
+	await db.delete(namingProject).where(eq(namingProject.id, projectId));
+});
