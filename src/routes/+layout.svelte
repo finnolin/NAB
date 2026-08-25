@@ -6,11 +6,14 @@
 	import { getNamingProject } from './projects/[id]/project.remote.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import { ModeWatcher, toggleMode } from 'mode-watcher';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import SettingsIcon from '@lucide/svelte/icons/settings-2';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import ListIcon from '@lucide/svelte/icons/list';
+	import SunIcon from '@lucide/svelte/icons/sun';
+	import MoonIcon from '@lucide/svelte/icons/moon';
 
 	let { children } = $props();
 
@@ -21,6 +24,8 @@
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
+
+<ModeWatcher />
 
 <div class="flex h-dvh flex-col">
 	<header class="shrink-0 border-b">
@@ -66,6 +71,11 @@
 							{/snippet}
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content align="end">
+							<DropdownMenu.Item onclick={toggleMode}>
+								<SunIcon class="dark:hidden" />
+								<MoonIcon class="hidden dark:block" />
+								Toggle theme
+							</DropdownMenu.Item>
 							<DropdownMenu.Item onclick={() => authClient.signOut()}>
 								<LogOutIcon />
 								Sign Out
