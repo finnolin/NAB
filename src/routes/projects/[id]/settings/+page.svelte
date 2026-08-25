@@ -10,6 +10,7 @@
 		removeProjectMember,
 		deleteProject
 	} from './settings.remote.js';
+	import { getUserProjects } from '../../../projects.remote.js';
 	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -54,8 +55,17 @@
 		await getProjectMembers(projectId).refresh();
 	}
 
+	let deleteError = $state<string | null>(null);
+
 	async function handleDeleteProject() {
-		await deleteProject(projectId);
+		deleteError = null;
+		try {
+			await deleteProject(projectId);
+		} catch (err) {
+			deleteError = err instanceof Error ? err.message : 'Failed to delete project.';
+			return;
+		}
+		await getUserProjects().refresh();
 		await goto('/');
 	}
 </script>
@@ -186,6 +196,11 @@
 					</AlertDialog.Footer>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
+			{#if deleteError}
+				<Alert.Root variant="destructive">
+					<Alert.Description>{deleteError}</Alert.Description>
+				</Alert.Root>
+			{/if}
 
 			{#snippet pending()}
 				<p class="text-muted-foreground">Loading…</p>
