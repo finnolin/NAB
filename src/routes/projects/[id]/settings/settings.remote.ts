@@ -63,6 +63,41 @@ export const removeCollection = command(
 	}
 );
 
+export const createCollection = command(
+	'unchecked',
+	async (input: { projectId: string; label: string }) => {
+		const requester = requireUser();
+		await requireProjectOwner(requester, input.projectId);
+
+		const label = input.label.trim();
+		if (!label) error(400, 'Collection name cannot be empty.');
+
+		const [created] = await db
+			.insert(nameCollection)
+			.values({ label })
+			.returning({ id: nameCollection.id });
+
+		// Link it to this project right away, since that's why it was created here.
+		await db
+			.insert(namingProjectCollection)
+			.values({ namingProjectId: input.projectId, collectionId: created.id })
+			.onConflictDoNothing();
+	}
+);
+
+export const renameCollection = command(
+	'unchecked',
+	async (input: { projectId: string; collectionId: string; label: string }) => {
+		const requester = requireUser();
+		await requireProjectOwner(requester, input.projectId);
+
+		const label = input.label.trim();
+		if (!label) error(400, 'Collection name cannot be empty.');
+
+		await db.update(nameCollection).set({ label }).where(eq(nameCollection.id, input.collectionId));
+	}
+);
+
 export const getProjectMembers = query('unchecked', async (projectId: string) => {
 	const requester = requireUser();
 	const project = await requireProjectAccess(requester, projectId);

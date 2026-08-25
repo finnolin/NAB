@@ -5,6 +5,8 @@
 		getProjectCollections,
 		addCollection,
 		removeCollection,
+		createCollection,
+		renameCollection,
 		getProjectMembers,
 		addProjectMember,
 		removeProjectMember,
@@ -20,6 +22,9 @@
 	import * as Alert from '#lib/components/ui/alert/index.js';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import XIcon from '@lucide/svelte/icons/x';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import ListIcon from '@lucide/svelte/icons/list';
 
 	const projectId = $derived(page.params.id!);
 
@@ -30,6 +35,38 @@
 			await removeCollection({ projectId, collectionId });
 		}
 		await getProjectCollections(projectId).refresh();
+	}
+
+	let editingCollectionId = $state<string | null>(null);
+	let editingLabel = $state('');
+
+	function startEditCollection(collectionId: string, label: string) {
+		editingCollectionId = collectionId;
+		editingLabel = label;
+	}
+
+	async function saveCollectionLabel(event: SubmitEvent, collectionId: string) {
+		event.preventDefault();
+		if (!editingLabel.trim()) return;
+		await renameCollection({ projectId, collectionId, label: editingLabel });
+		editingCollectionId = null;
+		await getProjectCollections(projectId).refresh();
+	}
+
+	let newCollectionLabel = $state('');
+	let createCollectionError = $state<string | null>(null);
+
+	async function handleCreateCollection(event: SubmitEvent) {
+		event.preventDefault();
+		if (!newCollectionLabel.trim()) return;
+		createCollectionError = null;
+		try {
+			await createCollection({ projectId, label: newCollectionLabel });
+			newCollectionLabel = '';
+			await getProjectCollections(projectId).refresh();
+		} catch (err) {
+			createCollectionError = err instanceof Error ? err.message : 'Failed to create collection.';
+		}
 	}
 
 	let newPrefix = $state('');
@@ -104,19 +141,74 @@
 			<Card.Root>
 				<Card.Content class="flex flex-col gap-4">
 					{#each collections as collection (collection.id)}
-						<Label class="flex items-center gap-3 font-normal">
-							<Checkbox
-								checked={collection.linked}
-								disabled={!isOwner}
-								onCheckedChange={(checked) => toggle(collection.id, !!checked)}
-							/>
-							{collection.label}
-						</Label>
+						{#if editingCollectionId === collection.id}
+							<form
+								class="flex items-center gap-2"
+								onsubmit={(e) => saveCollectionLabel(e, collection.id)}
+							>
+								<Input bind:value={editingLabel} class="h-8" autofocus />
+								<Button type="submit" variant="ghost" size="icon-sm" aria-label="Save name">
+									<CheckIcon />
+								</Button>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Cancel"
+									onclick={() => (editingCollectionId = null)}
+								>
+									<XIcon />
+								</Button>
+							</form>
+						{:else}
+							<div class="flex items-center gap-3">
+								<Label class="flex flex-1 items-center gap-3 font-normal">
+									<Checkbox
+										checked={collection.linked}
+										disabled={!isOwner}
+										onCheckedChange={(checked) => toggle(collection.id, !!checked)}
+									/>
+									{collection.label}
+								</Label>
+								<Button
+									href="/projects/{projectId}/settings/collections/{collection.id}"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Manage names in {collection.label}"
+								>
+									<ListIcon />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Rename collection"
+									disabled={!isOwner}
+									onclick={() => startEditCollection(collection.id, collection.label)}
+								>
+									<PencilIcon />
+								</Button>
+							</div>
+						{/if}
 					{:else}
 						<p class="text-sm text-muted-foreground">No collections exist yet.</p>
 					{/each}
 				</Card.Content>
 			</Card.Root>
+
+			<form class="flex items-center gap-2" onsubmit={handleCreateCollection}>
+				<Input
+					placeholder="New collection name"
+					bind:value={newCollectionLabel}
+					disabled={!isOwner}
+					class="h-8 max-w-sm"
+				/>
+				<Button type="submit" size="sm" disabled={!isOwner}>Add</Button>
+			</form>
+			{#if createCollectionError}
+				<Alert.Root variant="destructive">
+					<Alert.Description>{createCollectionError}</Alert.Description>
+				</Alert.Root>
+			{/if}
 
 			{#snippet pending()}
 				<p class="text-muted-foreground">Loading…</p>
