@@ -1,10 +1,10 @@
 <script lang="ts">
-	import NameStatsCard from './name-stats-card.svelte';
 	import RaterBadges from './rater-badges.svelte';
 	import { getNameRatings, getProjectAffixes, rateName } from './project.remote.js';
+	import { formatNumber } from '#lib/components/data-table/number-cell.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
-	import { Badge } from '#lib/components/ui/badge/index.js';
 	import XIcon from '@lucide/svelte/icons/x';
 	import ThumbsUpIcon from '@lucide/svelte/icons/thumbs-up';
 	import HeartIcon from '@lucide/svelte/icons/heart';
@@ -36,38 +36,38 @@
 	}
 </script>
 
-<NameStatsCard {name} {rankAllTime} {amountAllTime} {rankRecent} {amountRecent} />
+<Dialog.Header class="items-center text-center">
+	<Dialog.Title class="text-3xl font-semibold">{name}</Dialog.Title>
+</Dialog.Header>
 
 <svelte:boundary>
 	{@const affixes = await getProjectAffixes(projectId)}
 	{@const prefixes = affixes.filter((a) => a.type === 'prefix')}
 	{@const suffixes = affixes.filter((a) => a.type === 'suffix')}
 	{#if prefixes.length > 0 || suffixes.length > 0}
-		<div class="flex flex-col gap-2">
-			<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Preview</p>
-			<div class="flex flex-wrap gap-1">
-				{#each prefixes as p (p.id)}
-					<Badge variant="outline">{p.value}{name}</Badge>
-				{/each}
-				{#each suffixes as s (s.id)}
-					<Badge variant="outline">{name}{s.value}</Badge>
-				{/each}
-			</div>
+		<div class="-mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+			{#each prefixes as p (p.id)}
+				<span>{p.value}{name}</span>
+			{/each}
+			{#each suffixes as s (s.id)}
+				<span>{name}{s.value}</span>
+			{/each}
 		</div>
 	{/if}
 
 	{#snippet pending()}{/snippet}
 </svelte:boundary>
 
+<div class="flex flex-col items-center gap-0.5 text-xs text-muted-foreground">
+	<p>
+		All-time #{rankAllTime ? formatNumber(rankAllTime) : '—'} · {formatNumber(amountAllTime)} births
+	</p>
+	<p>2025 #{rankRecent ? formatNumber(rankRecent) : '—'} · {formatNumber(amountRecent)} births</p>
+</div>
+
 <svelte:boundary>
 	{@const { ratings, myRating } = await getNameRatings({ projectId, nameId })}
-	<div class="flex flex-col gap-2">
-		<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Rated by</p>
-		<RaterBadges {ratings} />
-	</div>
-
-	<div class="flex items-center justify-between">
-		<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your rating</p>
+	<div class="flex flex-col items-center gap-3">
 		<ButtonGroup>
 			<Button
 				variant={myRating === 'dislike' ? 'destructive' : 'outline'}
@@ -97,9 +97,14 @@
 				<HeartIcon />
 			</Button>
 		</ButtonGroup>
+		{#if ratings.length > 0}
+			<div class="flex justify-center">
+				<RaterBadges {ratings} />
+			</div>
+		{/if}
 	</div>
 
 	{#snippet pending()}
-		<p class="text-sm text-muted-foreground">Loading ratings…</p>
+		<p class="text-center text-sm text-muted-foreground">Loading ratings…</p>
 	{/snippet}
 </svelte:boundary>
