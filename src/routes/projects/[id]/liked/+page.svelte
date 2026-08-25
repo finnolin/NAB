@@ -6,6 +6,10 @@
 	import NameDetailsDialog from '../name-details-dialog.svelte';
 
 	const projectId = $derived(page.params.id!);
+
+	function rowClass(row: LikedNameRow) {
+		return row.myRating ? 'bg-muted' : undefined;
+	}
 </script>
 
 <div class="mx-auto flex h-full min-h-0 max-w-5xl flex-col gap-4 p-4">
@@ -18,6 +22,7 @@
 				filterPlaceholder="Search..."
 				pageSize={100}
 				emptyMessage="No liked or loved names yet."
+				{rowClass}
 			>
 				{#snippet rowDetails(row: LikedNameRow)}
 					<NameDetailsDialog

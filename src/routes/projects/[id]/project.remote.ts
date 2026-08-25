@@ -71,13 +71,7 @@ export const getNameRatings = query(
 		const mine = allRatings.find((r) => r.userId === requester.id);
 
 		return {
-			ratings: allRatings
-				.filter((r) => r.rating === 'like' || r.rating === 'love')
-				.map((r) => ({
-					userId: r.userId,
-					userName: r.userName,
-					rating: r.rating as 'like' | 'love'
-				})),
+			ratings: allRatings,
 			myRating: (mine?.rating as Rating | undefined) ?? null
 		};
 	}

@@ -17,13 +17,37 @@ export type LikedNameRow = {
 	amountAllTime: number;
 	rankRecent: number | null;
 	amountRecent: number;
-	ratings: { userId: string; userName: string; rating: 'like' | 'love' }[];
+	ratings: { userId: string; userName: string; rating: 'dislike' | 'like' | 'love' }[];
+	myRating: 'dislike' | 'like' | 'love' | null;
 };
 
 export const getLikedNames = query('unchecked', async (id: string): Promise<LikedNameRow[]> => {
 	const requester = requireUser();
 	await requireProjectAccess(requester, id);
 
+	// Names in this project's collections that at least one member liked/loved.
+	const qualifying = await db
+		.selectDistinct({ nameId: names.id })
+		.from(names)
+		.innerJoin(
+			namingProjectCollection,
+			and(
+				eq(namingProjectCollection.collectionId, names.collectionId),
+				eq(namingProjectCollection.namingProjectId, id)
+			)
+		)
+		.innerJoin(
+			nameRating,
+			and(
+				eq(nameRating.nameId, names.id),
+				eq(nameRating.namingProjectId, id),
+				inArray(nameRating.rating, ['like', 'love'])
+			)
+		);
+	if (qualifying.length === 0) return [];
+	const qualifyingIds = qualifying.map((q) => q.nameId);
+
+	// Every rating (dislikes included) for those names, so the column shows the full picture.
 	const rows = await db
 		.select({
 			nameId: names.id,
@@ -36,17 +60,10 @@ export const getLikedNames = query('unchecked', async (id: string): Promise<Like
 			userName: userTable.name,
 			rating: nameRating.rating
 		})
-		.from(nameRating)
-		.innerJoin(names, eq(nameRating.nameId, names.id))
-		.innerJoin(
-			namingProjectCollection,
-			and(
-				eq(namingProjectCollection.collectionId, names.collectionId),
-				eq(namingProjectCollection.namingProjectId, id)
-			)
-		)
+		.from(names)
+		.innerJoin(nameRating, and(eq(nameRating.nameId, names.id), eq(nameRating.namingProjectId, id)))
 		.innerJoin(userTable, eq(userTable.id, nameRating.userId))
-		.where(and(eq(nameRating.namingProjectId, id), inArray(nameRating.rating, ['like', 'love'])))
+		.where(inArray(names.id, qualifyingIds))
 		.orderBy(asc(names.name));
 
 	const byName = new Map<string, LikedNameRow>();
@@ -60,15 +77,17 @@ export const getLikedNames = query('unchecked', async (id: string): Promise<Like
 				amountAllTime: row.amountAllTime,
 				rankRecent: row.rankRecent,
 				amountRecent: row.amountRecent,
-				ratings: []
+				ratings: [],
+				myRating: null
 			};
 			byName.set(row.nameId, entry);
 		}
 		entry.ratings.push({
 			userId: row.userId,
 			userName: row.userName,
-			rating: row.rating as 'like' | 'love'
+			rating: row.rating
 		});
+		if (row.userId === requester.id) entry.myRating = row.rating;
 	}
 
 	return [...byName.values()];

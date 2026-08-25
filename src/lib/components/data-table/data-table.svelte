@@ -17,6 +17,7 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { features, type DataTableFeatures } from './data-table-features.js';
+	import { cn } from '#lib/utils.js';
 
 	type BulkActionProps = { selectedIds: string[]; clearSelection: () => void };
 	type MatchMode = 'contains' | 'startsWith' | 'endsWith';
@@ -38,6 +39,7 @@
 		selectable?: boolean;
 		bulkActions?: Snippet<[BulkActionProps]>;
 		rowDetails?: Snippet<[TData]>;
+		rowClass?: (row: TData) => string | undefined;
 	};
 
 	let {
@@ -50,7 +52,8 @@
 		toolbarEnd,
 		selectable = false,
 		bulkActions,
-		rowDetails
+		rowDetails,
+		rowClass
 	}: DataTableProps<TData> = $props();
 
 	let detailRow: TData | null = $state(null);
@@ -271,7 +274,7 @@
 					{#each table.getRowModel().rows as row (row.id)}
 						<Table.Row
 							data-state={row.getIsSelected() && 'selected'}
-							class={rowDetails ? 'cursor-pointer' : undefined}
+							class={cn(rowDetails && 'cursor-pointer', rowClass?.(row.original))}
 							onclick={(event) => openRowDetails(event, row.original)}
 						>
 							{#each row.getAllCells() as cell (cell.id)}
