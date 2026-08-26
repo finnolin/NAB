@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { flip } from 'svelte/animate';
+	import { fade } from 'svelte/transition';
 	import { getProjectNamesPage, rateName } from './project.remote.js';
 	import NameDetailsDialog from './name-details-dialog.svelte';
 	import RatingCell from './rating-cell.svelte';
@@ -108,10 +110,21 @@
 		pendingRatings = next;
 	}
 
+	function matchesRatingFilter(rating: Rating | null, filter: RatingFilter) {
+		if (filter === 'unrated') return rating === null;
+		if (filter === 'liked-loved') return rating === 'like' || rating === 'love';
+		if (filter === 'disliked') return rating === 'dislike';
+		return true;
+	}
+
+	// Applying the pending rating here (rather than just overlaying it) means a
+	// row that no longer matches the current filter drops out of `rows`
+	// immediately, instead of waiting for the background refresh — so the
+	// animate:flip below kicks in right away instead of on a delay.
 	const rows = $derived(
-		currentPage.rows.map((row) =>
-			row.id in pendingRatings ? { ...row, rating: pendingRatings[row.id] } : row
-		)
+		currentPage.rows
+			.map((row) => (row.id in pendingRatings ? { ...row, rating: pendingRatings[row.id] } : row))
+			.filter((row) => matchesRatingFilter(row.rating, ratingFilter))
 	);
 
 	async function rateOptimistically(nameId: string, rating: Rating) {
@@ -304,9 +317,13 @@
 					{@render colgroup()}
 					<Table.Body>
 						{#each rows as row (row.id)}
-							<Table.Row
-								class={cn('cursor-pointer')}
+							<tr
+								class={cn(
+									'cursor-pointer border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'
+								)}
 								onclick={(event) => openRowDetails(event, row)}
+								animate:flip={{ duration: 200 }}
+								in:fade={{ duration: 200 }}
 							>
 								<Table.Cell>
 									<Checkbox
@@ -322,7 +339,7 @@
 								<Table.Cell>
 									<RatingCell id={row.id} rating={row.rating} onRate={rateOptimistically} />
 								</Table.Cell>
-							</Table.Row>
+							</tr>
 						{:else}
 							<Table.Row>
 								<Table.Cell colspan={4} class="h-24 text-center">No names found.</Table.Cell>
