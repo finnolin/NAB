@@ -10,7 +10,7 @@ import {
 } from '#lib/server/db/schema.js';
 import { requireUser } from '#lib/server/auth/require-user.js';
 import { requireProjectAccess } from '#lib/server/db/naming-project.js';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 const RATINGS = ['dislike', 'like', 'love'] as const;
 type Rating = (typeof RATINGS)[number];
@@ -18,41 +18,111 @@ type Rating = (typeof RATINGS)[number];
 const AFFIX_TYPES = ['prefix', 'suffix'] as const;
 type AffixType = (typeof AFFIX_TYPES)[number];
 
+const RATING_FILTERS = ['all', 'liked-loved', 'unrated', 'disliked'] as const;
+type RatingFilter = (typeof RATING_FILTERS)[number];
+
+const MATCH_MODES = ['contains', 'startsWith', 'endsWith'] as const;
+type MatchMode = (typeof MATCH_MODES)[number];
+
 export const getNamingProject = query('unchecked', async (id: string) => {
 	const user = requireUser();
 	return requireProjectAccess(user, id);
 });
 
-export const getProjectNames = query('unchecked', async (id: string) => {
-	const user = requireUser();
-	await requireProjectAccess(user, id);
+// Escape LIKE's own wildcard characters so a literal %/_ typed by the user
+// doesn't act as one, then wrap per match mode.
+function likePattern(text: string, mode: MatchMode) {
+	const escaped = text.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
+	if (mode === 'startsWith') return `${escaped}%`;
+	if (mode === 'endsWith') return `%${escaped}`;
+	return `%${escaped}%`;
+}
 
-	return db
-		.select({
-			id: names.id,
-			name: names.name,
-			rankAllTime: names.rankAllTime,
-			amountAllTime: names.amountAllTime,
-			rankRecent: names.rankRecent,
-			amountRecent: names.amountRecent,
-			rating: nameRating.rating
-		})
-		.from(names)
-		.innerJoin(
-			namingProjectCollection,
-			eq(namingProjectCollection.collectionId, names.collectionId)
-		)
-		.leftJoin(
-			nameRating,
-			and(
-				eq(nameRating.nameId, names.id),
-				eq(nameRating.namingProjectId, id),
-				eq(nameRating.userId, user.id)
-			)
-		)
-		.where(eq(namingProjectCollection.namingProjectId, id))
-		.orderBy(asc(names.name));
-});
+export const getProjectNamesPage = query(
+	'unchecked',
+	async (input: {
+		projectId: string;
+		ratingFilter: RatingFilter;
+		search: { mode: MatchMode; text: string } | null;
+		sortBy: 'name' | 'amountAllTime';
+		sortDirection: 'asc' | 'desc';
+		pageIndex: number;
+		pageSize: number;
+	}) => {
+		const user = requireUser();
+
+		if (!RATING_FILTERS.includes(input.ratingFilter)) error(400, 'Invalid rating filter.');
+		if (input.search && !MATCH_MODES.includes(input.search.mode))
+			error(400, 'Invalid search match mode.');
+
+		await requireProjectAccess(user, input.projectId);
+
+		const conditions: SQL[] = [eq(namingProjectCollection.namingProjectId, input.projectId)];
+
+		if (input.ratingFilter === 'unrated') conditions.push(isNull(nameRating.rating));
+		else if (input.ratingFilter === 'liked-loved')
+			conditions.push(inArray(nameRating.rating, ['like', 'love']));
+		else if (input.ratingFilter === 'disliked') conditions.push(eq(nameRating.rating, 'dislike'));
+
+		if (input.search?.text) {
+			conditions.push(
+				sql`lower(${names.name}) LIKE ${likePattern(input.search.text, input.search.mode)} ESCAPE '\\'`
+			);
+		}
+
+		const where = and(...conditions);
+		const orderColumn = input.sortBy === 'amountAllTime' ? names.amountAllTime : names.name;
+		const orderFn = input.sortDirection === 'desc' ? desc : asc;
+
+		const [rows, [{ count }]] = await Promise.all([
+			db
+				.select({
+					id: names.id,
+					name: names.name,
+					rankAllTime: names.rankAllTime,
+					amountAllTime: names.amountAllTime,
+					rankRecent: names.rankRecent,
+					amountRecent: names.amountRecent,
+					rating: nameRating.rating
+				})
+				.from(names)
+				.innerJoin(
+					namingProjectCollection,
+					eq(namingProjectCollection.collectionId, names.collectionId)
+				)
+				.leftJoin(
+					nameRating,
+					and(
+						eq(nameRating.nameId, names.id),
+						eq(nameRating.namingProjectId, input.projectId),
+						eq(nameRating.userId, user.id)
+					)
+				)
+				.where(where)
+				.orderBy(orderFn(orderColumn), asc(names.id))
+				.limit(input.pageSize)
+				.offset(input.pageIndex * input.pageSize),
+			db
+				.select({ count: sql<number>`count(*)` })
+				.from(names)
+				.innerJoin(
+					namingProjectCollection,
+					eq(namingProjectCollection.collectionId, names.collectionId)
+				)
+				.leftJoin(
+					nameRating,
+					and(
+						eq(nameRating.nameId, names.id),
+						eq(nameRating.namingProjectId, input.projectId),
+						eq(nameRating.userId, user.id)
+					)
+				)
+				.where(where)
+		]);
+
+		return { rows, rowCount: count };
+	}
+);
 
 export const getNameRatings = query(
 	'unchecked',
