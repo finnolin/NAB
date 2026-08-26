@@ -1,5 +1,7 @@
 <script lang="ts" generics="TData extends RowData & { id: string }">
 	import { untrack, type Snippet } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { fade } from 'svelte/transition';
 	import {
 		type ColumnDef,
 		type RowData,
@@ -272,17 +274,23 @@
 				{@render colgroup()}
 				<Table.Body>
 					{#each table.getRowModel().rows as row (row.id)}
-						<Table.Row
+						<tr
 							data-state={row.getIsSelected() && 'selected'}
-							class={cn(rowDetails && 'cursor-pointer', rowClass?.(row.original))}
+							class={cn(
+								'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+								rowDetails && 'cursor-pointer',
+								rowClass?.(row.original)
+							)}
 							onclick={(event) => openRowDetails(event, row.original)}
+							animate:flip={{ duration: 200 }}
+							in:fade={{ duration: 200 }}
 						>
 							{#each row.getAllCells() as cell (cell.id)}
 								<Table.Cell>
 									<FlexRender {cell} />
 								</Table.Cell>
 							{/each}
-						</Table.Row>
+						</tr>
 					{:else}
 						<Table.Row>
 							<Table.Cell colspan={effectiveColumns.length} class="h-24 text-center">

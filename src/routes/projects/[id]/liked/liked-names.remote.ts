@@ -4,6 +4,7 @@ import {
 	names,
 	nameRating,
 	namingProjectCollection,
+	namingProjectUser,
 	user as userTable
 } from '#lib/server/db/schema.js';
 import { requireUser } from '#lib/server/auth/require-user.js';
@@ -19,11 +20,21 @@ export type LikedNameRow = {
 	amountRecent: number;
 	ratings: { userId: string; userName: string; rating: 'dislike' | 'like' | 'love' }[];
 	myRating: 'dislike' | 'like' | 'love' | null;
+	// Every member of the project (owner included) rated this name like/love.
+	matched: boolean;
 };
 
 export const getLikedNames = query('unchecked', async (id: string): Promise<LikedNameRow[]> => {
 	const requester = requireUser();
 	await requireProjectAccess(requester, id);
+
+	// Owner plus everyone added via naming_project_user (requireProjectAccess's
+	// own definition of project membership).
+	const extraMembers = await db
+		.select({ userId: namingProjectUser.userId })
+		.from(namingProjectUser)
+		.where(eq(namingProjectUser.namingProjectId, id));
+	const memberCount = extraMembers.length + 1;
 
 	// Names in this project's collections that at least one member liked/loved.
 	const qualifying = await db
@@ -78,7 +89,8 @@ export const getLikedNames = query('unchecked', async (id: string): Promise<Like
 				rankRecent: row.rankRecent,
 				amountRecent: row.amountRecent,
 				ratings: [],
-				myRating: null
+				myRating: null,
+				matched: false
 			};
 			byName.set(row.nameId, entry);
 		}
@@ -90,5 +102,11 @@ export const getLikedNames = query('unchecked', async (id: string): Promise<Like
 		if (row.userId === requester.id) entry.myRating = row.rating;
 	}
 
-	return [...byName.values()];
+	const entries = [...byName.values()];
+	for (const entry of entries) {
+		entry.matched =
+			entry.ratings.length === memberCount && entry.ratings.every((r) => r.rating !== 'dislike');
+	}
+
+	return entries;
 });
