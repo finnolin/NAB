@@ -29,10 +29,30 @@
 		onRated?: () => void | Promise<void>;
 	} = $props();
 
+	// Isolated from pendingRating below: this only re-awaits when
+	// getNameRatings actually refreshes, not on every optimistic update.
+	const nameRatings = $derived(await getNameRatings({ projectId, nameId }));
+
+	// Optimistic override so the buttons update instantly instead of waiting
+	// on getNameRatings' refresh. undefined = defer to the fetched value.
+	let pendingRating = $state<'dislike' | 'like' | 'love' | undefined>(undefined);
+
 	async function rate(rating: 'dislike' | 'like' | 'love') {
-		await rateName({ namingProjectId: projectId, nameId, rating });
-		await getNameRatings({ projectId, nameId }).refresh();
-		await onRated?.();
+		pendingRating = rating;
+		try {
+			await rateName({ namingProjectId: projectId, nameId, rating });
+		} catch {
+			pendingRating = undefined;
+			return;
+		}
+		// Reconcile with the server (and let the underlying list know) in the
+		// background — don't block the buttons on either of these.
+		getNameRatings({ projectId, nameId })
+			.refresh()
+			.then(() => {
+				pendingRating = undefined;
+			});
+		onRated?.();
 	}
 </script>
 
@@ -66,7 +86,8 @@
 </div>
 
 <svelte:boundary>
-	{@const { ratings, myRating } = await getNameRatings({ projectId, nameId })}
+	{@const ratings = nameRatings.ratings}
+	{@const myRating = pendingRating !== undefined ? pendingRating : nameRatings.myRating}
 	<div class="flex flex-col items-center gap-3">
 		<ButtonGroup>
 			<Button

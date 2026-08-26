@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { getProjectNames, rateName } from './project.remote.js';
 	import DataTable from '#lib/components/data-table/data-table.svelte';
-	import { columns, type NameRow } from './columns.js';
+	import { createColumns, type NameRow } from './columns.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { ButtonGroup } from '#lib/components/ui/button-group/index.js';
 	import NameDetailsDialog from './name-details-dialog.svelte';
@@ -34,16 +34,66 @@
 		return names;
 	}
 
-	const filteredNames = $derived(filterByRating(await getProjectNames(projectId), ratingFilter));
+	type Rating = 'dislike' | 'like' | 'love';
+
+	// Optimistic overrides layered on top of the last-fetched data. Rating a
+	// name updates the visible (and filtered) list instantly instead of
+	// waiting on a full-list refresh, which re-fetches thousands of rows and
+	// can take a while, especially on mobile.
+	let pendingRatings = $state<Record<string, Rating>>({});
+
+	function withPendingRatings(rows: NameRow[]) {
+		if (Object.keys(pendingRatings).length === 0) return rows;
+		return rows.map((row) =>
+			row.id in pendingRatings ? { ...row, rating: pendingRatings[row.id] } : row
+		);
+	}
+
+	function clearPending(...nameIds: string[]) {
+		if (nameIds.every((id) => !(id in pendingRatings))) return;
+		const next = { ...pendingRatings };
+		for (const id of nameIds) delete next[id];
+		pendingRatings = next;
+	}
+
+	// Isolated from the filtering/overlay below: this only re-awaits when
+	// getProjectNames actually refreshes, not whenever pendingRatings changes.
+	const rawNames = $derived(await getProjectNames(projectId));
+
+	// Plain sync derived — no `await` in this expression — so applying an
+	// optimistic rating never waits on any network activity.
+	const filteredNames = $derived(filterByRating(withPendingRatings(rawNames), ratingFilter));
+
+	async function rateOptimistically(nameId: string, rating: Rating) {
+		pendingRatings = { ...pendingRatings, [nameId]: rating };
+		try {
+			await rateName({ namingProjectId: projectId, nameId, rating });
+		} catch {
+			clearPending(nameId);
+			return;
+		}
+		// Reconcile with the server in the background — don't block on it.
+		getProjectNames(projectId)
+			.refresh()
+			.then(() => clearPending(nameId));
+	}
+
+	const columns = createColumns(rateOptimistically);
 
 	async function bulkDislike(selectedIds: string[], clearSelection: () => void) {
+		pendingRatings = {
+			...pendingRatings,
+			...Object.fromEntries(selectedIds.map((id) => [id, 'dislike' as const]))
+		};
+		clearSelection();
 		await Promise.all(
 			selectedIds.map((id) =>
 				rateName({ namingProjectId: projectId, nameId: id, rating: 'dislike' })
 			)
 		);
-		clearSelection();
-		await getProjectNames(projectId).refresh();
+		getProjectNames(projectId)
+			.refresh()
+			.then(() => clearPending(...selectedIds));
 	}
 </script>
 
